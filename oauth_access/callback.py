@@ -1,6 +1,7 @@
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.shortcuts import redirect
+from django.conf import settings
 
 from django.contrib.auth import login
 from django.contrib.auth.models import User
@@ -62,5 +63,5 @@ class AuthenticationCallback(Callback):
         self.login_user(request, user)
 
     def login_user(self, request, user):
-        user.backend = "django.contrib.auth.backends.ModelBackend"
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
         login(request, user)

@@ -7,11 +7,11 @@ import httplib2
 import logging
 import urllib
 import urlparse
+import json
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse
-from django.utils import simplejson as json
 
 from django.contrib.sites.models import Site
 
