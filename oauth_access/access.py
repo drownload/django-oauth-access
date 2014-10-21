@@ -174,8 +174,10 @@ class OAuthAccess(object):
                 params["code"] = code
                 if self.service == 'stripe':
                     params['grant_type'] = 'authorization_code'
-                    raw_data = urllib.urlopen(self.access_token_url,
-                        urllib.urlencode(params)).read()
+                raw_data = urllib.urlopen(self.access_token_url,
+                    urllib.urlencode(params)).read()
+
+                if self.service == 'stripe':
                     response = json.loads(raw_data)
                     error = response.get('error', False)
                     if error:
