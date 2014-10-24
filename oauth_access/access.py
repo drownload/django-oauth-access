@@ -193,10 +193,11 @@ class OAuthAccess(object):
                 expires = response.get("expires", None)
                 if expires:
                     expires = int(expires[-1])
-                return OAuth20Token(
-                    response["access_token"][-1],
-                    expires
-                )
+                if 'access_token' in response:
+                    token = response["access_token"][-1]
+                else:
+                    token = response["code"][-1]
+                return OAuth20Token(token, expires)
             else:
                 # @@@ this error case is not nice
                 return ''
