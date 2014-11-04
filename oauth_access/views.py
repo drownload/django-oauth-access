@@ -29,7 +29,10 @@ def oauth_callback(request, service):
     access_token = request.GET.get('access_token', None)
     signed_request = request.GET.get('signed_request', None)
     if access_token and signed_request:
-        data = access.parse_signed_request(signed_request)
+        if signed_request == 'n/a':
+            data = True
+        else:
+            data = access.parse_signed_request(signed_request)
         if data:
             auth_token = OAuth20Token(access_token)
             return access.callback(request, access, auth_token)
