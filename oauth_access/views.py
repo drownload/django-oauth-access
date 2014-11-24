@@ -44,6 +44,10 @@ def oauth_callback(request, service):
     unauth_token = request.session.get("%s_unauth_token" % service, None)
     try:
         if service == 'stripe':
+            if request.GET.get('error', False):
+                ctx.update({'error': request.GET['error_description']})
+                return render_to_response("oauth_access/oauth_error.html", ctx)
+
             auth_token, publishable_key = access.check_token(unauth_token,
                 request.GET)
         else:
