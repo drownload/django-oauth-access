@@ -19,6 +19,10 @@ def oauth_login(request, service, redirect_field_name="next", redirect_to_sessio
 
 
 def oauth_callback(request, service):
+    def get_oauth_error():
+        if type(auth_token) in [unicode, str]:
+            return auth_token
+
     ctx = RequestContext(request)
     access = OAuthAccess(service)
 
@@ -35,15 +39,31 @@ def oauth_callback(request, service):
 
     unauth_token = request.session.get("%s_unauth_token" % service, None)
     try:
-        auth_token = access.check_token(unauth_token, request.GET)
+        if service == 'stripe':
+            if request.GET.get('error', False):
+                ctx.update({'error': request.GET['error_description']})
+                return render_to_response("oauth_access/oauth_error.html", ctx)
+
+            auth_token, publishable_key = access.check_token(unauth_token,
+                request.GET)
+        else:
+            auth_token = access.check_token(unauth_token, request.GET)
     except MissingToken:
         ctx.update({"error": "token_missing"})
     else:
-        if auth_token:
-            return access.callback(request, access, auth_token)
+        auth_token_error = get_oauth_error()
+        if auth_token_error is None:
+            if service == 'stripe':
+                return access.callback(request, access, auth_token,
+                    publishable_key)
+            else:
+                return access.callback(request, access, auth_token)
         else:
             # @@@ not nice for OAuth 2
-            ctx.update({"error": request.GET.get("error", "token_mismatch")})
+            if service == 'stripe':
+                ctx.update({"error": auth_token_error})
+            else:
+                ctx.update({"error": request.GET.get("error", "token_mismatch")})
     return render_to_response("oauth_access/oauth_error.html", ctx)
 
 

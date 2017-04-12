@@ -35,6 +35,7 @@ class ServiceFail(Exception):
 
 
 class OAuthAccess(object):
+    OAUTH2_SERVICES = ['facebook', 'stripe']
 
     def __init__(self, service):
         self.service = service
@@ -154,7 +155,7 @@ class OAuthAccess(object):
         return oauth.Token.from_string(content)
 
     def check_token(self, unauth_token, parameters):
-        if self.service != "facebook" and unauth_token is None:
+        if self.service not in self.OAUTH2_SERVICES and unauth_token is None:
             raise MissingToken
         if unauth_token:
             token = oauth.Token.from_string(unauth_token)
@@ -162,7 +163,7 @@ class OAuthAccess(object):
                 verifier = parameters.get("oauth_verifier")
                 return self.authorized_token(token, verifier)
             else:
-                return None
+                return ''
         else:
             code = parameters.get("code")
             if code:
@@ -172,11 +173,19 @@ class OAuthAccess(object):
                 )
                 params["client_secret"] = self.secret
                 params["code"] = code
-                raw_data = urllib.urlopen(
-                    "%s?%s" % (
-                        self.access_token_url, urllib.urlencode(params)
-                    )
-                ).read()
+                if self.service == 'stripe':
+                    params['grant_type'] = 'authorization_code'
+                raw_data = urllib.urlopen(self.access_token_url,
+                    urllib.urlencode(params)).read()
+
+                if self.service == 'stripe':
+                    response = json.loads(raw_data)
+                    error = response.get('error', False)
+                    if error:
+                        return error, None
+                    return (OAuth20Token(
+                        response["access_token"]),
+                        response["stripe_publishable_key"])
                 response = cgi.parse_qs(raw_data)
                 # @@@ Facebook does not return "expires",
                 # yet its tokens expire after 2 hours
@@ -191,7 +200,7 @@ class OAuthAccess(object):
                 )
             else:
                 # @@@ this error case is not nice
-                return None
+                return ''
 
     @property
     def callback(self):
@@ -325,7 +334,6 @@ class Client(oauth.Client):
         redirections=httplib2.DEFAULT_MAX_REDIRECTS, connection_type=None,
         force_auth_header=False
     ):
-
         DEFAULT_CONTENT_TYPE = "application/x-www-form-urlencoded"
 
         if not isinstance(headers, dict):
